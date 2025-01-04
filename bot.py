@@ -57,7 +57,7 @@ async def op(_, m :Message):
         ]]
     )
     add_user(m.from_user.id)
-    await m.reply_photo("https://graph.org/file/d57d6f83abb6b8d0efb02.jpg", caption="Hello! I'm an auto approve bot for managing admin requests.", reply_markup=keyboard)
+    await m.reply_photo("https://graph.org/file/d57d6f83abb6b8d0efb02.jpg", caption="مرحبا 🐾Ashrf ♥️👋\\n\\nبوت قبول طلبات الانضمام الخاصة بالقنوات والكروبات✅.\\nيمكنك قبول الطلبات بشكل تلقائي مباشرةً أو تخزينها لقبولها لاحقاً بنقرة زر من خلال البوت 📩.\\n\\n✅ قناة البوت: @looniaa1\\n✅ صانع بوتات: @dev_ashrf", reply_markup=keyboard)
 
 # Callback
 
