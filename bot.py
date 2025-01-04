@@ -108,6 +108,7 @@ async def add_channel_callback(_, cb: CallbackQuery):
         reply_markup=keyboard
     )
 
+
 # إعداد نظام تسجيل الأخطاء
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -115,36 +116,30 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        user_chats = []
-        
-        # استعراض القنوات التي يمكن للبوت الوصول إليها
-        for chat_id in cfg.CHANNELS:  # أو أي قائمة تحتوي على القنوات التي تريد التحقق منها
-            try:
-                chat_member = await app.get_chat_member(chat_id, cb.from_user.id)
-                if chat_member.status in ['member', 'administrator']:
-                    user_chats.append(chat_member.chat)
-            except Exception as e:
-                logger.error(f"Error while fetching chat members: {e}")
+        # محاولة جلب الحوارات الخاصة بالمستخدم
+        user_chats = await app.get_dialogs()
+        # تصفية القنوات فقط
+        channels = [
+            chat for chat in user_chats 
+            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP)
+        ]
 
-        if not user_chats:
+        if not channels:
             await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
             return
 
         # إنشاء أزرار للقنوات
         buttons = [
-            [InlineKeyboardButton(chat.title, callback_data=f"select_channel_{chat.id}")]
-            for chat in user_chats
+            [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
+            for chat in channels
         ]
         buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        
-        # تحقق من النص الحالي للرسالة لتجنب التكرار
-        if cb.message.text != "اختر القناة التي تريد إضافة البوت إليها:":
-            await cb.message.edit_text(
-                "اختر القناة التي تريد إضافة البوت إليها:",
-                reply_markup=keyboard
-            )
+        await cb.message.edit_text(
+            "اختر القناة التي تريد إضافة البوت إليها:",
+            reply_markup=keyboard
+        )
     except errors.FloodWait as e:
         logger.error(f"FloodWait: {e.value} ثانية.")
         await asyncio.sleep(e.value)
