@@ -117,13 +117,13 @@ logger = logging.getLogger(__name__)
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
         # محاولة جلب الحوارات الخاصة بالمستخدم
-        user_chats = await app.get_dialogs()
+        user_chats = app.get_dialogs()
 
         # تصفية القنوات فقط التي يمتلكها المستخدم أو التي لديه صلاحية الإدارية فيها
-        channels = [
-            chat for chat in user_chats 
-            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP) and chat.chat.permissions.can_manage_chat
-        ]
+        channels = []
+        async for chat in user_chats:
+            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP) and chat.chat.permissions.can_manage_chat:
+                channels.append(chat)
 
         if not channels:
             await cb.answer("لم يتم العثور على قنوات تمتلكها أو تحتوي على صلاحيات إدارية.", show_alert=True)
