@@ -116,10 +116,10 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # جلب جميع المحادثات
+        # جلب جميع المحادثات التي يمكن الوصول إليها
         user_chats = await app.get_dialogs()
 
-        # تصفية القنوات
+        # تصفية القنوات فقط
         channels = [
             chat for chat in user_chats
             if chat.chat.type == enums.ChatType.CHANNEL
@@ -150,7 +150,7 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
 
         keyboard = InlineKeyboardMarkup(buttons)
 
-        # تحقق من النص الحالي وإذا كان لا يختلف عن النص الجديد
+        # التحقق من النص الحالي ومقارنته بالنص الجديد
         current_text = cb.message.text
         new_text = "اختر القناة التي تريد إضافة البوت إليها:"
 
