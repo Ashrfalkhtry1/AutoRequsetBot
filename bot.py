@@ -113,14 +113,13 @@ async def add_channel_callback(_, cb: CallbackQuery):
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # الحصول على جميع القنوات التي يملكها المستخدم
-        user_chats = await app.get_my_chats()
+        # الحصول على جميع الحوارات (الدردشات)
+        user_chats = await app.get_dialogs()
         
-        # تصفية القنوات
+        # تصفية القنوات فقط
         channels = [
             chat for chat in user_chats
             if chat.chat.type == enums.ChatType.CHANNEL
@@ -138,10 +137,15 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        await cb.message.edit_text(
-            "اختر القناة التي تريد إضافة البوت إليها:",
-            reply_markup=keyboard
-        )
+
+        # التأكد من أن المحتوى قد تغير قبل تعديل الرسالة
+        new_text = "اختر القناة التي تريد إضافة البوت إليها:"
+        if cb.message.text != new_text:
+            await cb.message.edit_text(
+                new_text,
+                reply_markup=keyboard
+            )
+
     except Exception as e:
         print(f"Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
