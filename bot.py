@@ -115,11 +115,16 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # بدلاً من استخدام get_dialogs، نستخدم get_chat_member لمعرفة القنوات التي ينتمي إليها المستخدم
         user_chats = []
-        async for chat in app.iter_chat_members():
-            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
-                user_chats.append(chat.chat)
+        
+        # استعراض القنوات التي يمكن للبوت الوصول إليها
+        for chat_id in cfg.CHANNELS:  # أو أي قائمة تحتوي على القنوات التي تريد التحقق منها
+            try:
+                chat_member = await app.get_chat_member(chat_id, cb.from_user.id)
+                if chat_member.status in ['member', 'administrator']:
+                    user_chats.append(chat_member.chat)
+            except Exception as e:
+                logger.error(f"Error while fetching chat members: {e}")
 
         if not user_chats:
             await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
