@@ -116,42 +116,50 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # جلب جميع المحادثات التي يملكها المستخدم
+        # جلب جميع المحادثات
         user_chats = await app.get_dialogs()
 
-        # تصفية القنوات التي يكون المستخدم مشرفًا فيها
-        channels = []
-        for chat in user_chats:
-            if chat.chat.type == enums.ChatType.CHANNEL:
-                try:
-                    # التحقق إذا كان المستخدم مشرفًا في القناة
-                    chat_member = await app.get_chat_member(chat.chat.id, cb.from_user.id)
-                    if chat_member.status in [enums.ChatMemberStatus.ADMIN, enums.ChatMemberStatus.CREATOR]:
-                        channels.append(chat)
-                except Exception as e:
-                    # إذا كانت القناة غير موجودة أو المستخدم ليس مشرفًا فيها
-                    print(f"Error checking chat member: {e}")
-                    continue
+        # تصفية القنوات
+        channels = [
+            chat for chat in user_chats
+            if chat.chat.type == enums.ChatType.CHANNEL
+        ]
 
-        if not channels:
+        # تصفية القنوات التي يكون المستخدم مشرفًا فيها
+        admin_channels = []
+        for chat in channels:
+            try:
+                # التحقق إذا كان المستخدم مشرفًا
+                chat_member = await app.get_chat_member(chat.chat.id, cb.from_user.id)
+                if chat_member.status in [enums.ChatMemberStatus.ADMIN, enums.ChatMemberStatus.CREATOR]:
+                    admin_channels.append(chat)
+            except Exception as e:
+                # إذا فشل التحقق أو لم يكن المستخدم مشرفًا
+                continue
+
+        if not admin_channels:
             await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك أو أنت لست مشرفًا في أي قناة.", show_alert=True)
             return
 
         # إنشاء الأزرار للقنوات المتاحة
         buttons = [
             [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
-            for chat in channels
+            for chat in admin_channels
         ]
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
 
-        # تعديل النص فقط إذا كان مختلفًا
-        if cb.message.text != "اختر القناة التي تريد إضافة البوت إليها:":
+        # تحقق من النص الحالي وإذا كان لا يختلف عن النص الجديد
+        current_text = cb.message.text
+        new_text = "اختر القناة التي تريد إضافة البوت إليها:"
+
+        if current_text != new_text:  # فقط إذا كان النص مختلفًا
             await cb.message.edit_text(
-                "اختر القناة التي تريد إضافة البوت إليها:",
+                new_text,
                 reply_markup=keyboard
             )
+
     except Exception as e:
         print(f"Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
