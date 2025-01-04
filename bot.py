@@ -69,7 +69,7 @@ async def op(_, m :Message):
                 InlineKeyboardButton("قنواتي وكروباتي", callback_data="my_channels")
             ],
             [
-                InlineKeyboardButton("انضمام الى القناة", url="https://t.me/looniaa1")
+                InlineKeyboardButton("انضمام الى القناة", url="https://t.me/+rfquoCO_seszYzRk")
             ]
         ]
     )
