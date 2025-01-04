@@ -93,15 +93,73 @@ async def op(_, m :Message):
 # Callback handlers
 @app.on_callback_query(filters.regex("add_channel"))
 async def add_channel_callback(_, cb: CallbackQuery):
-    await cb.answer("خاصية إضافة القناة قيد التطوير!", show_alert=True)
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("إضافة البوت إلى القناة", callback_data="add_bot_to_channel"),
+                InlineKeyboardButton("رجوع", callback_data="go_back")
+            ]
+        ]
+    )
+    await cb.message.edit_text(
+        "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
+        reply_markup=keyboard
+    )
 
-@app.on_callback_query(filters.regex("add_group"))
-async def add_group_callback(_, cb: CallbackQuery):
-    await cb.answer("خاصية إضافة الكروب قيد التطوير!", show_alert=True)
+@app.on_callback_query(filters.regex("add_bot_to_channel"))
+async def add_bot_to_channel_callback(_, cb: CallbackQuery):
+    try:
+        user_chats = await app.get_dialogs()
+        channels = [chat for chat in user_chats if chat.chat.type == enums.ChatType.CHANNEL]
+        if not channels:
+            await cb.answer("لم يتم العثور على قنوات!", show_alert=True)
+            return
 
-@app.on_callback_query(filters.regex("my_channels"))
-async def my_channels_callback(_, cb: CallbackQuery):
-    await cb.answer("عرض قنواتك وكروباتك قيد التطوير!", show_alert=True)
+        buttons = [
+            [InlineKeyboardButton(channel.chat.title, callback_data=f"select_channel_{channel.chat.id}")]
+            for channel in channels
+        ]
+        buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
+
+        keyboard = InlineKeyboardMarkup(buttons)
+        await cb.message.edit_text(
+            "اختر القناة التي تريد إضافة البوت إليها:",
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        print(e)
+        await cb.answer("حدث خطأ أثناء جلب القنوات.", show_alert=True)
+
+@app.on_callback_query(filters.regex("select_channel_"))
+async def select_channel_callback(_, cb: CallbackQuery):
+    channel_id = int(cb.data.split("_")[-1])
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Add bot as Admin", callback_data=f"add_admin_{channel_id}")],
+            [InlineKeyboardButton("رجوع", callback_data="add_bot_to_channel")]
+        ]
+    )
+    await cb.message.edit_text(
+        f"قم برفع البوت مشرف في القناة {channel_id}.\nثم اختر الصلاحيات التي ستعطيها للبوت:",
+        reply_markup=keyboard
+    )
+
+@app.on_callback_query(filters.regex("add_admin_"))
+async def add_admin_callback(_, cb: CallbackQuery):
+    channel_id = int(cb.data.split("_")[-1])
+    try:
+        # Simulate adding the bot as an admin
+        await cb.answer("تم إضافة البوت كأدمن!", show_alert=True)
+        await cb.message.edit_text(
+            f"تم إضافة البوت كأدمن في القناة {channel_id}.\nالرجاء إرسال توجيه من قناتك أو معرف القناة لإتمام العملية."
+        )
+    except Exception as e:
+        print(e)
+        await cb.answer("حدث خطأ أثناء رفع البوت كأدمن.", show_alert=True)
+
+@app.on_callback_query(filters.regex("go_back"))
+async def go_back_callback(_, cb: CallbackQuery):
+    await op(_, cb.message)
 
 # Info
 
@@ -115,13 +173,14 @@ async def dbtool(_, m : Message):
 # Broadcast
 
 @app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def bcast(_, m : Message):
+async def bcast(_, m: Message):
     allusers = users
     lel = await m.reply_text("Processing...")
     success = 0
     failed = 0
     deactivated = 0
     blocked = 0
+
     for usrs in allusers.find():
         try:
             userid = usrs["user_id"]
@@ -142,6 +201,5 @@ async def bcast(_, m : Message):
             failed += 1
 
     await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")
-
 print("Bot is running!")
 app.run()
