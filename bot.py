@@ -5,6 +5,8 @@ from pyrogram.errors.exceptions.flood_420 import FloodWait
 from database import add_user, add_group, all_users, all_groups, users, remove_user
 from configs import cfg
 import random, asyncio
+import logging
+
 
 app = Client(
     "approver",
@@ -105,7 +107,11 @@ async def add_channel_callback(_, cb: CallbackQuery):
         "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
         reply_markup=keyboard
     )
+import logging
 
+# إعداد نظام تسجيل الأخطاء
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
@@ -135,15 +141,16 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
             reply_markup=keyboard
         )
     except errors.FloodWait as e:
-        print(f"FloodWait: {e.value} ثانية.")
+        logger.error(f"FloodWait: {e.value} ثانية.")
         await asyncio.sleep(e.value)
         await cb.answer("حدث تأخير أثناء جلب القنوات، يرجى المحاولة لاحقاً.", show_alert=True)
     except errors.RPCError as e:
-        print(f"RPC Error: {e}")
+        logger.error(f"RPC Error: {e}")
         await cb.answer("تحقق من إعدادات حسابك أو حاول مجددًا لاحقاً.", show_alert=True)
     except Exception as e:
-        print(f"Unexpected Error: {e}")
+        logger.error(f"Unexpected Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
+
 
 @app.on_callback_query(filters.regex("select_channel_"))
 async def select_channel_callback(_, cb: CallbackQuery):
