@@ -1,4 +1,4 @@
-# VJ Auto Approve Bot
+# Ashrf Auto Approve Bot
 
 **👾 Hey I'll Accept New Telegram Channel Or Group Join Request. Easy To Use And Simple.**
 
@@ -19,4 +19,4 @@
   
 ## 💫 Credits
  
- - <b>[Tech VJ](https://youtube.com/@Tech_VJ)</b>
+
