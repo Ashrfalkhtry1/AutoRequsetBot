@@ -1,4 +1,5 @@
 pyrofork
+pyrogram 
 TgCrypto
 pymongo[srv]
 aiohttp
