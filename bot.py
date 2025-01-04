@@ -144,7 +144,8 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         )
     except Exception as e:
         print(f"Error: {e}")
-        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى
+        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
+
 
 @app.on_callback_query(filters.regex("select_channel_"))
 async def select_channel_callback(_, cb: CallbackQuery):
