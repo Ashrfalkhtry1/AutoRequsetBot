@@ -111,14 +111,16 @@ async def add_channel_callback(_, cb: CallbackQuery):
 # إعداد نظام تسجيل الأخطاء
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # محاولة جلب الحوارات الخاصة بالمستخدم
-        user_chats = await app.get_dialogs()
+        # استخدام async for للتكرار عبر الحوارات
+        user_chats = [chat async for chat in app.get_dialogs()]
+        
         # تصفية القنوات فقط
         channels = [
-            chat for chat in user_chats 
+            chat for chat in user_chats
             if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP)
         ]
 
