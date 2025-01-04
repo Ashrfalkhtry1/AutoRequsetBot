@@ -145,10 +145,13 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        await cb.message.edit_text(
-            "اختر القناة التي تريد إضافة البوت إليها:",
-            reply_markup=keyboard
-        )
+        
+        # التحقق مما إذا كان النص الجديد هو نفسه النص القديم
+        if cb.message.text != "اختر القناة التي تريد إضافة البوت إليها:":
+            await cb.message.edit_text(
+                "اختر القناة التي تريد إضافة البوت إليها:",
+                reply_markup=keyboard
+            )
     except Exception as e:
         print(f"Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
