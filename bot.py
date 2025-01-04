@@ -115,10 +115,7 @@ async def bcast(_, m : Message):
             print(e)
             failed += 1
 
-    await lel.edit(f"Success: {success}
-Failed: {failed}
-Blocked: {blocked}
-Deactivated: {deactivated}")
+    await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")
 
 print("Bot is running!")
 app.run()
