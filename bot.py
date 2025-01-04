@@ -123,14 +123,14 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         channels = []
         for chat in user_chats:
             if chat.chat.type == enums.ChatType.CHANNEL:
-                # تحقق إذا كان المستخدم مشرفًا في القناة
                 try:
-                    # الحصول على معلومات القناة
+                    # التحقق إذا كان المستخدم مشرفًا في القناة
                     chat_member = await app.get_chat_member(chat.chat.id, cb.from_user.id)
                     if chat_member.status in [enums.ChatMemberStatus.ADMIN, enums.ChatMemberStatus.CREATOR]:
                         channels.append(chat)
                 except Exception as e:
-                    # في حال لم يكن المستخدم عضوًا في القناة أو حدث خطأ آخر
+                    # إذا كانت القناة غير موجودة أو المستخدم ليس مشرفًا فيها
+                    print(f"Error checking chat member: {e}")
                     continue
 
         if not channels:
@@ -145,8 +145,8 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        
-        # التحقق مما إذا كان النص الجديد هو نفسه النص القديم
+
+        # تعديل النص فقط إذا كان مختلفًا
         if cb.message.text != "اختر القناة التي تريد إضافة البوت إليها:":
             await cb.message.edit_text(
                 "اختر القناة التي تريد إضافة البوت إليها:",
