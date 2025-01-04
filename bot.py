@@ -107,12 +107,10 @@ async def add_channel_callback(_, cb: CallbackQuery):
         "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
         reply_markup=keyboard
     )
-import logging
 
 # إعداد نظام تسجيل الأخطاء
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
@@ -136,10 +134,13 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        await cb.message.edit_text(
-            "اختر القناة التي تريد إضافة البوت إليها:",
-            reply_markup=keyboard
-        )
+        
+        # تحقق من النص الحالي للرسالة لتجنب التكرار
+        if cb.message.text != "اختر القناة التي تريد إضافة البوت إليها:":
+            await cb.message.edit_text(
+                "اختر القناة التي تريد إضافة البوت إليها:",
+                reply_markup=keyboard
+            )
     except errors.FloodWait as e:
         logger.error(f"FloodWait: {e.value} ثانية.")
         await asyncio.sleep(e.value)
