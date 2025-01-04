@@ -116,17 +116,25 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # الحصول على جميع الحوارات (الدردشات)
+        # جلب جميع المحادثات التي يملكها المستخدم
         user_chats = await app.get_dialogs()
-        
-        # تصفية القنوات فقط
-        channels = [
-            chat for chat in user_chats
-            if chat.chat.type == enums.ChatType.CHANNEL
-        ]
+
+        # تصفية القنوات التي يكون المستخدم مشرفًا فيها
+        channels = []
+        for chat in user_chats:
+            if chat.chat.type == enums.ChatType.CHANNEL:
+                # تحقق إذا كان المستخدم مشرفًا في القناة
+                try:
+                    # الحصول على معلومات القناة
+                    chat_member = await app.get_chat_member(chat.chat.id, cb.from_user.id)
+                    if chat_member.status in [enums.ChatMemberStatus.ADMIN, enums.ChatMemberStatus.CREATOR]:
+                        channels.append(chat)
+                except Exception as e:
+                    # في حال لم يكن المستخدم عضوًا في القناة أو حدث خطأ آخر
+                    continue
 
         if not channels:
-            await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
+            await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك أو أنت لست مشرفًا في أي قناة.", show_alert=True)
             return
 
         # إنشاء الأزرار للقنوات المتاحة
@@ -137,22 +145,10 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-
-        # إضافة تعديل بسيط على النص لضمان التغيير
-        new_text = "اختر القناة التي تريد إضافة البوت إليها:\n\nقنواتك:"
-        
-        if cb.message.text != new_text:
-            await cb.message.edit_text(
-                new_text,
-                reply_markup=keyboard
-            )
-        else:
-            # إذا كان النص نفسه، نقوم بتعديل النص بإضافة مسافة أو تعديل بسيط
-            await cb.message.edit_text(
-                f"{new_text}\n\n(تم التحديث)",
-                reply_markup=keyboard
-            )
-
+        await cb.message.edit_text(
+            "اختر القناة التي تريد إضافة البوت إليها:",
+            reply_markup=keyboard
+        )
     except Exception as e:
         print(f"Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
