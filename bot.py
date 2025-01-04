@@ -106,18 +106,27 @@ async def add_channel_callback(_, cb: CallbackQuery):
         reply_markup=keyboard
     )
 
+
+
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
+        # جلب قائمة الحوارات
         user_chats = await app.get_dialogs()
-        channels = [chat for chat in user_chats if chat.chat.type == enums.ChatType.CHANNEL]
+        # تصفية القنوات فقط
+        channels = [
+            chat for chat in user_chats 
+            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP)
+        ]
+        
         if not channels:
-            await cb.answer("لم يتم العثور على قنوات!", show_alert=True)
+            await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
             return
 
+        # إنشاء أزرار لكل قناة
         buttons = [
-            [InlineKeyboardButton(channel.chat.title, callback_data=f"select_channel_{channel.chat.id}")]
-            for channel in channels
+            [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
+            for chat in channels
         ]
         buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
 
@@ -126,9 +135,13 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
             "اختر القناة التي تريد إضافة البوت إليها:",
             reply_markup=keyboard
         )
+    except errors.FloodWait as e:
+        print(f"FloodWait: يجب الانتظار {e.value} ثانية.")
+        await asyncio.sleep(e.value)
+        await cb.answer("حدث تأخير أثناء جلب القنوات، يرجى المحاولة لاحقاً.", show_alert=True)
     except Exception as e:
-        print(e)
-        await cb.answer("حدث خطأ أثناء جلب القنوات.", show_alert=True)
+        print(f"Error in add_bot_to_channel_callback: {e}")
+        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
 
 @app.on_callback_query(filters.regex("select_channel_"))
 async def select_channel_callback(_, cb: CallbackQuery):
