@@ -113,45 +113,38 @@ async def add_channel_callback(_, cb: CallbackQuery):
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # محاولة جلب الحوارات الخاصة بالمستخدم
-        user_chats = app.get_dialogs()
-
-        # تصفية القنوات فقط التي يمتلكها المستخدم أو التي لديه صلاحية الإدارية فيها
-        channels = []
-        async for chat in user_chats:
-            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP) and chat.chat.permissions.can_manage_chat:
-                channels.append(chat)
+        # الحصول على جميع القنوات التي يملكها المستخدم
+        user_chats = await app.get_my_chats()
+        
+        # تصفية القنوات
+        channels = [
+            chat for chat in user_chats
+            if chat.chat.type == enums.ChatType.CHANNEL
+        ]
 
         if not channels:
-            await cb.answer("لم يتم العثور على قنوات تمتلكها أو تحتوي على صلاحيات إدارية.", show_alert=True)
+            await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
             return
 
-        # إنشاء أزرار للقنوات
+        # إنشاء الأزرار للقنوات المتاحة
         buttons = [
             [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
             for chat in channels
         ]
-        buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
+        buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
         await cb.message.edit_text(
             "اختر القناة التي تريد إضافة البوت إليها:",
             reply_markup=keyboard
         )
-    except errors.FloodWait as e:
-        logger.error(f"FloodWait: {e.value} ثانية.")
-        await asyncio.sleep(e.value)
-        await cb.answer("حدث تأخير أثناء جلب القنوات، يرجى المحاولة لاحقاً.", show_alert=True)
-    except errors.RPCError as e:
-        logger.error(f"RPC Error: {e}")
-        await cb.answer("تحقق من إعدادات حسابك أو حاول مجددًا لاحقاً.", show_alert=True)
     except Exception as e:
-        logger.error(f"Unexpected Error: {e}")
-        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
-
+        print(f"Error: {e}")
+        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى
 
 @app.on_callback_query(filters.regex("select_channel_"))
 async def select_channel_callback(_, cb: CallbackQuery):
