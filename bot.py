@@ -1,4 +1,3 @@
-
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram import filters, Client, errors, enums
 from pyrogram.errors import UserNotParticipant
@@ -23,7 +22,7 @@ async def approve(_, m : Message):
     try:
         add_group(m.chat.id)
         await app.approve_chat_join_request(op.id, kk.id)
-        await app.send_message(kk.id, f"""مرحباً {m.from_user.mention} 🐾♥️👋
+        await app.send_message(kk.id, f"""مرحباً {m.from_user.mention} 🐾❤️👋
 
 ✨ **بوت إدارة طلبات الانضمام** ✨  
 هذا البوت يتيح لك قبول طلبات الانضمام الخاصة بالقنوات والكروبات ✅  
@@ -61,15 +60,23 @@ async def op(_, m :Message):
         await m.reply_text("Access Denied! Join My Update Channel To Use Me.", reply_markup=key)
         return 
     keyboard = InlineKeyboardMarkup(
-        [[
-            InlineKeyboardButton("Channel", url="https://t.me/looniaa1"),
-            InlineKeyboardButton("Support", url="https://t.me/")
-        ]]
+        [
+            [
+                InlineKeyboardButton("اضافة قناة", callback_data="add_channel"),
+                InlineKeyboardButton("اضافة كروب", callback_data="add_group")
+            ],
+            [
+                InlineKeyboardButton("قنواتي وكروباتي", callback_data="my_channels")
+            ],
+            [
+                InlineKeyboardButton("انضمام الى القناة", url="https://t.me/looniaa1")
+            ]
+        ]
     )
     add_user(m.from_user.id)
     await m.reply_photo(
     "https://ibb.co/vhW9ntn", 
-    caption=f"""مرحباً {m.from_user.mention} 🐾♥️👋
+    caption=f"""مرحباً {m.from_user.mention} 🐾❤️👋
 
 ✨ **بوت إدارة طلبات الانضمام** ✨  
 هذا البوت يتيح لك قبول طلبات الانضمام الخاصة بالقنوات والكروبات ✅  
@@ -82,23 +89,19 @@ async def op(_, m :Message):
 """,
     reply_markup=keyboard
     )
-# Callback
 
-@app.on_callback_query(filters.regex("chk"))
-async def chk(_, cb : CallbackQuery):
-    try:
-        await app.get_chat_member(cfg.CHID, cb.from_user.id)
-    except:
-        await cb.answer("You are not joined my channel.", show_alert=True)
-        return 
-    keyboard = InlineKeyboardMarkup(
-        [[
-            InlineKeyboardButton("Channel", url="https://t.me/looniaa1"),
-            InlineKeyboardButton("Support", url="https://t.me/")
-        ]]
-    )
-    add_user(cb.from_user.id)
-    await cb.edit_text(text="Welcome to the bot! Join the channel to proceed.", reply_markup=keyboard)
+# Callback handlers
+@app.on_callback_query(filters.regex("add_channel"))
+async def add_channel_callback(_, cb: CallbackQuery):
+    await cb.answer("خاصية إضافة القناة قيد التطوير!", show_alert=True)
+
+@app.on_callback_query(filters.regex("add_group"))
+async def add_group_callback(_, cb: CallbackQuery):
+    await cb.answer("خاصية إضافة الكروب قيد التطوير!", show_alert=True)
+
+@app.on_callback_query(filters.regex("my_channels"))
+async def my_channels_callback(_, cb: CallbackQuery):
+    await cb.answer("عرض قنواتك وكروباتك قيد التطوير!", show_alert=True)
 
 # Info
 
