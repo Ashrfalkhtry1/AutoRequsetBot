@@ -138,11 +138,18 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
 
         keyboard = InlineKeyboardMarkup(buttons)
 
-        # التأكد من أن المحتوى قد تغير قبل تعديل الرسالة
-        new_text = "اختر القناة التي تريد إضافة البوت إليها:"
+        # إضافة تعديل بسيط على النص لضمان التغيير
+        new_text = "اختر القناة التي تريد إضافة البوت إليها:\n\nقنواتك:"
+        
         if cb.message.text != new_text:
             await cb.message.edit_text(
                 new_text,
+                reply_markup=keyboard
+            )
+        else:
+            # إذا كان النص نفسه، نقوم بتعديل النص بإضافة مسافة أو تعديل بسيط
+            await cb.message.edit_text(
+                f"{new_text}\n\n(تم التحديث)",
                 reply_markup=keyboard
             )
 
