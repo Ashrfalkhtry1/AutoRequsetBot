@@ -115,23 +115,20 @@ logger = logging.getLogger(__name__)
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
     try:
-        # استخدام async for للتكرار عبر الحوارات
-        user_chats = [chat async for chat in app.get_dialogs()]
-        
-        # تصفية القنوات فقط
-        channels = [
-            chat for chat in user_chats
-            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP)
-        ]
+        # بدلاً من استخدام get_dialogs، نستخدم get_chat_member لمعرفة القنوات التي ينتمي إليها المستخدم
+        user_chats = []
+        async for chat in app.iter_chat_members():
+            if chat.chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+                user_chats.append(chat.chat)
 
-        if not channels:
+        if not user_chats:
             await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك.", show_alert=True)
             return
 
         # إنشاء أزرار للقنوات
         buttons = [
-            [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
-            for chat in channels
+            [InlineKeyboardButton(chat.title, callback_data=f"select_channel_{chat.id}")]
+            for chat in user_chats
         ]
         buttons.append([InlineKeyboardButton("رجوع", callback_data="add_channel")])
 
