@@ -84,10 +84,7 @@ async def dbtool(_, m : Message):
     xx = all_users()
     x = all_groups()
     tot = int(xx + x)
-    await m.reply_text(text=f"Chats Stats
-Users: {xx}
-Groups: {x}
-Total: {tot}")
+    await m.reply_text(text=f"Chats Stats Users: {xx} Groups: {x} Total: {tot}")
 
 # Broadcast
 
