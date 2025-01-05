@@ -1,211 +1,124 @@
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from pyrogram import filters, Client, errors, enums
-from pyrogram.errors import UserNotParticipant
-from pyrogram.errors.exceptions.flood_420 import FloodWait
-from database import add_user, add_group, all_users, all_groups, users, remove_user
-from configs import cfg
-import random, asyncio
-import logging
-
-app = Client(
-    "approver",
-    api_id=cfg.API_ID,
-    api_hash=cfg.API_HASH,
-    bot_token=cfg.BOT_TOKEN
-)
-import logging
-from telegram import Update, ChatInviteLink
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    ChatJoinRequestHandler,
-    ContextTypes,
-)
-
-# ------------------------------------------
-# 1) ضبط اللوج
-# ------------------------------------------
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-# ------------------------------------------
-# 2) ضع التوكن الخاص ببوتك هنا
-# ------------------------------------------
+from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
+from pyrogram import Client, filters
+from pyrogram.types import *
+from motor.motor_asyncio import AsyncIOMotorClient  
+from os import environ as env
+import asyncio, datetime, time
 
 
-# ------------------------------------------
-# 3) متغير لتخزين بيانات القنوات والمجموعات للمستخدمين في الذاكرة
-#    البنية: {user_id: {"channels": [], "groups": []}}
-# ------------------------------------------
-user_data_store = {}
+ACCEPTED_TEXT = "{user},\n\n𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝗌𝗍 𝖳𝗈 𝖩𝗈𝗂𝗇 {chat} 𝖺𝗌 𝖻𝖾𝖾𝗇 𝖠𝖼𝖼𝖾𝗉𝗍𝖾𝖽."
+START_TEXT = "{},\n\n𝖨 𝖼𝖺𝗇 𝖺𝗎𝗍𝗈𝗆𝖺𝗍𝗂𝖼𝖺𝗅𝗅𝗒 𝖺𝗉𝗉𝗋𝗈𝗏𝖾 𝗎𝗌𝖾𝗋𝗌 𝗂𝗇 𝖼𝗁𝖺𝗇𝗇𝖾𝗅𝗌 𝖺𝗇𝖽 𝗀𝗋𝗈𝗎𝗉𝗌.\n\n𝖩𝗎𝗌𝗍 𝖺𝖽𝖽 𝗆𝖾 𝗂𝗇 𝗒𝗈𝗎𝗋 𝖼𝗁𝖺𝗇𝗇𝖾𝗅𝗌 𝖺𝗇𝖽 𝗀𝗋𝗈𝗎𝗉𝗌 𝗐𝗂𝗍𝗁 𝗉𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗍𝗈 𝖺𝖽𝖽 𝗇𝖾𝗐 𝗆𝖾𝗆𝖻𝖾𝗋𝗌.\n\n**<blockquote>ᴍᴀɪɴᴛᴀɪɴᴇᴅ ʙʏ : <a href='https://telegram.me/CallOwnerBot'>ʀᴀʜᴜʟ</a></blockquote>**"
 
-# ------------------------------------------
-# 4) دالة لقبول طلب الانضمام تلقائي
-# ------------------------------------------
-async def join_request_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_join_request = update.chat_join_request
-    user_id = chat_join_request.from_user.id
-    chat_id = chat_join_request.chat.id
+API_ID = int(env.get('API_ID', ''))
+API_HASH = env.get('API_HASH', '')
+BOT_TOKEN = env.get('BOT_TOKEN', '')
+DB_URL = env.get('DB_URL', '')
+ADMINS = int(env.get('ADMINS', ''))
+AUTH_CHANNEL = int(env.get('AUTH_CHANNEL', ''))
 
-    # قبول طلب الانضمام
-    await context.bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
+Dbclient = AsyncIOMotorClient(DB_URL)
+Cluster = Dbclient['Cluster0']
+Data = Cluster['users']
+Bot = Client(name='AutoApproveBot', api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-    # إرسال رسالة ترحيب في الخاص (إن أمكن)
+async def get_fsub(bot, message):
+    target_channel_id = AUTH_CHANNEL  # Your channel ID
+    user_id = message.from_user.id
     try:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"مرحبًا {chat_join_request.from_user.first_name}!\n"
-                 f"تم قبول طلب انضمامك في المجموعة/القناة بنجاح."
+        # Check if user is a member of the required channel
+        await bot.get_chat_member(target_channel_id, user_id)
+    except UserNotParticipant:
+        # Generate the channel invite link
+        channel_link = (await bot.get_chat(target_channel_id)).invite_link
+        join_button = InlineKeyboardButton("🔔 Join Our Channel", url=channel_link)
+
+        # Display a message encouraging the user to join
+        keyboard = [[join_button]]
+        await message.reply(
+            f"<b>👋 Hello {message.from_user.mention()}, Welcome!</b>\n\n"
+            "📢 <b>Exclusive Access Alert!</b> ✨\n\n"
+            "To unlock all the amazing features I offer, please join our updates channel. "
+            "This helps us keep you informed and ensures top-notch service just for you! 😊\n\n"
+            "<i>🚀 Join now and dive into a world of knowledge and creativity!</i>",
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
-    except Exception as e:
-        logging.warning(f"تعذر إرسال رسالة خاصة للمستخدم {user_id}: {e}")
+        return False
+    else:
+        return True
 
-# ------------------------------------------
-# 5) أوامر البوت
-# ------------------------------------------
+@Bot.on_message(filters.command("start") & filters.private)                    
+async def start_handler(c, m):
+    user_id = m.from_user.id
+    if not await Data.find_one({'id': user_id}):
+        await Data.insert_one({'id': user_id})
+    # Force Subscription Check
+    is_subscribed = await get_fsub(c, m)
+    if not is_subscribed:
+        return
+    button = [[
+        InlineKeyboardButton("⇆ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘs ⇆", url=f"https://telegram.me/QuickAcceptBot?startgroup=true&admin=invite_users"),
+    ], [
+        InlineKeyboardButton("• ᴜᴩᴅᴀᴛᴇꜱ •", url="https://telegram.me/TheReleaseZone"),
+        InlineKeyboardButton("• ꜱᴜᴩᴩᴏʀᴛ •", url="https://telegram.me/TechifySupport")
+    ], [
+        InlineKeyboardButton("⇆ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ᴄʜᴀɴɴᴇʟ ⇆", url=f"https://telegram.me/QuickAcceptBot?startchannel=true&admin=invite_users")
+    ]]
+    return await m.reply_text(text=START_TEXT.format(m.from_user.mention), disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup(button))
 
-# --- أمر /start ---
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+@Bot.on_message(filters.command(["broadcast", "users"]) & filters.user(ADMINS))
+async def broadcast(c, m):
+    if m.text == "/users":
+        total_users = await Data.count_documents({})
+        return await m.reply(f"Total Users: {total_users}")
+    
+    b_msg = m.reply_to_message
+    if not b_msg:
+        return await m.reply("Please reply to a message to broadcast.")
+    
+    sts = await m.reply_text("Broadcasting your message...")
+    users = Data.find({})
+    total_users = await Data.count_documents({})
+    done, failed, success = 0, 0, 0
+    start_time = time.time()
 
-    # تهيئة التخزين للمستخدم إن لم يكن موجودًا
-    if user_id not in user_data_store:
-        user_data_store[user_id] = {"channels": [], "groups": []}
+    async for user in users:
+        user_id = int(user['id'])
+        try:
+            await b_msg.copy(chat_id=user_id)
+            success += 1
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            await b_msg.copy(chat_id=user_id)
+            success += 1
+        except (InputUserDeactivated, PeerIdInvalid):
+            await Data.delete_many({'id': user_id})
+            failed += 1
+        except UserIsBlocked:
+            failed += 1
+        except Exception as e:
+            # Optionally log unexpected errors for debugging
+            print(f"Error broadcasting to {user_id}: {e}")
+            failed += 1
+        done += 1
 
-    await update.message.reply_text(
-        "أهلاً بك!\n"
-        "استخدم الأوامر التالية:\n"
-        "/addchannel - لإضافة قناة\n"
-        "/addgroup - لإضافة مجموعة\n"
-        "/mylist - لعرض القنوات والمجموعات لديك\n"
-        "/joinchannel - للانضمام إلى قناة محددة"
+        # Update status for every user
+        await sts.edit(f"Broadcast in progress:\n\nTotal Users: {total_users}\nCompleted: {done} / {total_users}\nSuccess: {success}\nFailed: {failed}")
+    
+    time_taken = datetime.timedelta(seconds=int(time.time() - start_time))
+    await sts.delete()
+    await m.reply_text(
+        f"Broadcast Completed:\nCompleted in {time_taken} seconds.\n\n"
+        f"Total Users: {total_users}\nCompleted: {done} / {total_users}\nSuccess: {success}\nFailed: {failed}",
+        quote=True
     )
 
-# --- أمر /addchannel ---
-async def add_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+@Bot.on_chat_join_request()
+async def req_accept(c, m):
+    user_id = m.from_user.id
+    chat_id = m.chat.id
+    if not await Data.find_one({'id': user_id}): await Data.insert_one({'id': user_id})
+    await c.approve_chat_join_request(chat_id, user_id)
+    try: await c.send_message(user_id, ACCEPTED_TEXT.format(user=m.from_user.mention, chat=m.chat.title))
+    except Exception as e: print(e)
 
-    # التأكد من وجود بارامتر (اسم قناة أو رابط)
-    if not context.args:
-        await update.message.reply_text("الرجاء كتابة اسم المستخدم الخاص بالقناة أو رابط القناة بعد الأمر.\nمثال: /addchannel @channel_username")
-        return
-
-    channel_link_or_username = context.args[0]
-
-    # حفظ القناة في ذاكرة المستخدم
-    if user_id not in user_data_store:
-        user_data_store[user_id] = {"channels": [], "groups": []}
-
-    user_data_store[user_id]["channels"].append(channel_link_or_username)
-
-    await update.message.reply_text(
-        f"تم إضافة القناة: {channel_link_or_username} إلى قائمتك بنجاح!"
-    )
-
-# --- أمر /addgroup ---
-async def add_group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    # التأكد من وجود بارامتر (اسم مجموعة أو رابط)
-    if not context.args:
-        await update.message.reply_text("الرجاء كتابة رابط أو اسم مستخدم المجموعة بعد الأمر.\nمثال: /addgroup @my_private_group")
-        return
-
-    group_link_or_username = context.args[0]
-
-    # حفظ المجموعة في ذاكرة المستخدم
-    if user_id not in user_data_store:
-        user_data_store[user_id] = {"channels": [], "groups": []}
-
-    user_data_store[user_id]["groups"].append(group_link_or_username)
-
-    await update.message.reply_text(
-        f"تم إضافة المجموعة: {group_link_or_username} إلى قائمتك بنجاح!"
-    )
-
-# --- أمر /mylist ---
-async def my_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    # التأكد من أن للمستخدم بيانات
-    if user_id not in user_data_store:
-        await update.message.reply_text("لا توجد أي بيانات محفوظة لديك.")
-        return
-
-    channels = user_data_store[user_id]["channels"]
-    groups = user_data_store[user_id]["groups"]
-
-    if not channels and not groups:
-        await update.message.reply_text("قائمتك خالية من القنوات والمجموعات.")
-        return
-
-    msg = "قنواتك:\n" if channels else "لا توجد قنوات.\n"
-    for ch in channels:
-        msg += f"- {ch}\n"
-
-    msg += "\nمجموعاتك:\n" if groups else "\nلا توجد مجموعات.\n"
-    for gr in groups:
-        msg += f"- {gr}\n"
-
-    await update.message.reply_text(msg)
-
-# --- أمر /joinchannel ---
-async def join_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    هذا الأمر يرسل رابط الانضمام للقناة إن كان متاحًا.
-    يجب أن يكون البوت أدمن في القناة حتى يستطيع إنشاء رابط دعوة.
-    """
-    if not context.args:
-        await update.message.reply_text("الرجاء إدخال معرف القناة (username) بعد الأمر.\nمثال: /joinchannel @mychannel")
-        return
-
-    channel_username = context.args[0]
-
-    try:
-        # إنشاء رابط دعوة مؤقت (قابل للاستخدام مرة واحدة أو أكثر حسب الإعدادات)
-        invite_link: ChatInviteLink = await context.bot.create_chat_invite_link(
-            chat_id=channel_username,
-            name="Temp Link",  # اسم وصفي للرابط (اختياري)
-            creates_join_request=False,  # إذا True فسيكون 'طلب انضمام' وليس رابط دعوة مباشر
-            member_limit=1,  # مثلاً رابط لشخص واحد
-            expire_date=None  # يمكن تحديد وقت انتهاء
-        )
-
-        await update.message.reply_text(
-            f"هذا هو رابط الدعوة لقناتك:\n{invite_link.invite_link}\n"
-            f"يسمح بدخول مستخدم واحد فقط (حسب الإعدادات)."
-        )
-    except Exception as e:
-        logging.error(f"حصل خطأ أثناء إنشاء رابط الدعوة: {e}")
-        await update.message.reply_text(
-            "تعذر إنشاء رابط دعوة. تأكد أن البوت أدمن في القناة ولديه الصلاحيات المناسبة."
-        )
-
-# ------------------------------------------
-# 6) الدالة الرئيسية لتشغيل البوت
-# ------------------------------------------
-async def main():
-    # إنشاء التطبيق (Application)
-    application = ApplicationBuilder().token(cfg.BOT_TOKEN).build()
-
-    # إضافة الهاندلر الخاص بطلبات الانضمام
-    application.add_handler(ChatJoinRequestHandler(join_request_handler))
-
-    # إضافة أوامر البوت
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("addchannel", add_channel_command))
-    application.add_handler(CommandHandler("addgroup", add_group_command))
-    application.add_handler(CommandHandler("mylist", my_list_command))
-    application.add_handler(CommandHandler("joinchannel", join_channel_command))
-
-    # تشغيل البوت (Polling)
-    await application.run_polling()
-
-# ------------------------------------------
-# 7) تشغيل البوت
-# ------------------------------------------
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+Bot.run()
