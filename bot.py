@@ -36,7 +36,9 @@ async def approve(_, m: Message):
         print("user isn't start bot(means group)")
     except Exception as err:
         print(str(err))
-        @app.on_message(filters.private & filters.command("start"))
+
+
+@app.on_message(filters.private & filters.command("start"))
 async def op(_, m: Message):
     try:
         await app.get_chat_member(cfg.CHID, m.from_user.id)
@@ -83,7 +85,10 @@ async def op(_, m: Message):
 👨‍💻 **صانع البوتات:** [@dev_ashrf](https://t.me/dev_ashrf)  
 """,
     reply_markup=keyboard
-    )@app.on_callback_query(filters.regex("add_channel"))
+    )
+
+
+@app.on_callback_query(filters.regex("add_channel"))
 async def add_channel_callback(_, cb: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         [
@@ -163,7 +168,10 @@ async def add_admin_callback(_, cb: CallbackQuery):
 
 @app.on_callback_query(filters.regex("go_back"))
 async def go_back_callback(_, cb: CallbackQuery):
-    await op(_, cb.message)@app.on_callback_query(filters.regex("channel_settings"))
+    await op(_, cb.message)
+
+
+@app.on_callback_query(filters.regex("channel_settings"))
 async def channel_settings_callback(_, cb: CallbackQuery):
     channel_id = int(cb.data.split("_")[-1])
     try:
@@ -190,78 +198,9 @@ async def channel_settings_callback(_, cb: CallbackQuery):
         )
     except Exception as e:
         print(e)
-        await cb.answer("حدث خطأ أثناء جلب معلومات القناة.", show_alert=True)@app.on_message(filters.command("users") & filters.user(cfg.SUDO))
-async def dbtool(_, m: Message):
-    xx = all_users()
-    x = all_groups()
-    tot = int(xx + x)
-    await m.reply_text(text=f"Chats Stats Users: {xx} Groups: {x} Total: {tot}")
+        await cb.answer("حدث خطأ أثناء جلب معلومات القناة.", show_alert=True)
 
-@app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def bcast(_, m: Message):
-    allusers = users
-    lel = await m.reply_text("Processing...")
-    success = 0
-    failed = 0
-    deactivated = 0
-    blocked = 0
-
-    for usrs in allusers.find():
-        try:
-            userid = usrs["user_id"]
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(userid)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(e)
-            failed += 1
-
-    await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")@app.on_message(filters.command("users") & filters.user(cfg.SUDO))
-async def dbtool(_, m: Message):
-    xx = all_users()
-    x = all_groups()
-    tot = int(xx + x)
-    await m.reply_text(text=f"Chats Stats Users: {xx} Groups: {x} Total: {tot}")
-
-@app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def bcast(_, m: Message):
-    allusers = users
-    lel = await m.reply_text("Processing...")
-    success = 0
-    failed = 0
-    deactivated = 0
-    blocked = 0
-
-    for usrs in allusers.find():
-        try:
-            userid = usrs["user_id"]
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(userid)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(e)
-            failed += 1
-
-    await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")
-    @app.on_message(filters.command("users") & filters.user(cfg.SUDO))
+@app.on_message(filters.command("users") & filters.user(cfg.SUDO))
 async def dbtool(_, m: Message):
     xx = all_users()
     x = all_groups()
@@ -297,7 +236,9 @@ async def bcast(_, m: Message):
             failed += 1
 
     await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")
-    print("Bot is running!")
+
+print("Bot is running!")
 app.run()
+
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
