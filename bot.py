@@ -90,18 +90,21 @@ async def op(_, m: Message):
 
 @app.on_callback_query(filters.regex("add_channel"))
 async def add_channel_callback(_, cb: CallbackQuery):
-    keyboard = InlineKeyboardMarkup(
-        [
+    try:
+        keyboard = InlineKeyboardMarkup(
             [
-                InlineKeyboardButton("إضافة البوت إلى القناة", callback_data="add_bot_to_channel"),
-                InlineKeyboardButton("رجوع", callback_data="go_back")
+                [
+                    InlineKeyboardButton("إضافة البوت إلى القناة", callback_data="add_bot_to_channel"),
+                    InlineKeyboardButton("رجوع", callback_data="go_back")
+                ]
             ]
-        ]
-    )
-    await cb.message.edit_text(
-        "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
-        reply_markup=keyboard
-    )
+        )
+        await cb.message.edit_text(
+            "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
+            reply_markup=keyboard
+        )
+    except errors.MessageNotModified:
+        pass  # تجاهل الخطأ إذا كانت الرسالة لم تتغير
 
 @app.on_callback_query(filters.regex("add_bot_to_channel"))
 async def add_bot_to_channel_callback(_, cb: CallbackQuery):
@@ -131,29 +134,41 @@ async def add_bot_to_channel_callback(_, cb: CallbackQuery):
         buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
 
         keyboard = InlineKeyboardMarkup(buttons)
-        await cb.message.edit_text(
-            "اختر القناة التي تريد إضافة البوت إليها:",
-            reply_markup=keyboard
-        )
+        new_text = "اختر القناة التي تريد إضافة البوت إليها:"
+        current_text = cb.message.text  # النص الحالي للرسالة
+
+        if current_text != new_text:  # التحقق من اختلاف النص
+            await cb.message.edit_text(
+                new_text,
+                reply_markup=keyboard
+            )
+        else:
+            await cb.answer("الرسالة لم تتغير.", show_alert=True)
 
     except Exception as e:
         print(f"Error: {e}")
         await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
 
+
 @app.on_callback_query(filters.regex("select_channel_"))
 async def select_channel_callback(_, cb: CallbackQuery):
     channel_id = int(cb.data.split("_")[-1])
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("Add bot as Admin", callback_data=f"add_admin_{channel_id}")],
-            [InlineKeyboardButton("رجوع", callback_data="add_bot_to_channel")]
-        ]
-    )
-    await cb.message.edit_text(
-        f"قم برفع البوت مشرف في القناة {channel_id}.\nثم اختر الصلاحيات التي ستعطيها للبوت:",
-        reply_markup=keyboard
-    )
+    new_text = f"قم برفع البوت مشرف في القناة {channel_id}.\nثم اختر الصلاحيات التي ستعطيها للبوت:"
+    current_text = cb.message.text  # النص الحالي للرسالة
 
+    if current_text != new_text:  # التحقق من اختلاف النص
+        keyboard = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("Add bot as Admin", callback_data=f"add_admin_{channel_id}")],
+                [InlineKeyboardButton("رجوع", callback_data="add_bot_to_channel")]
+            ]
+        )
+        await cb.message.edit_text(
+            new_text,
+            reply_markup=keyboard
+        )
+    else:
+        await cb.answer("الرسالة لم تتغير.", show_alert=True)
 @app.on_callback_query(filters.regex("add_admin_"))
 async def add_admin_callback(_, cb: CallbackQuery):
     channel_id = int(cb.data.split("_")[-1])
