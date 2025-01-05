@@ -9,12 +9,12 @@ import asyncio, datetime, time
 ACCEPTED_TEXT = "{user},\n\n𝖸𝗈𝗎𝗋 𝖱𝖾𝗊𝗎𝗌𝗍 𝖳𝗈 𝖩𝗈𝗂𝗇 {chat} 𝖺𝗌 𝖻𝖾𝖾𝗇 𝖠𝖼𝖼𝖾𝗉𝗍𝖾𝖽."
 START_TEXT = "{},\n\n𝖨 𝖼𝖺𝗇 𝖺𝗎𝗍𝗈𝗆𝖺𝗍𝗂𝖼𝖺𝗅𝗅𝗒 𝖺𝗉𝗉𝗋𝗈𝗏𝖾 𝗎𝗌𝖾𝗋𝗌 𝗂𝗇 𝖼𝗁𝖺𝗇𝗇𝖾𝗅𝗌 𝖺𝗇𝖽 𝗀𝗋𝗈𝗎𝗉𝗌.\n\n𝖩𝗎𝗌𝗍 𝖺𝖽𝖽 𝗆𝖾 𝗂𝗇 𝗒𝗈𝗎𝗋 𝖼𝗁𝖺𝗇𝗇𝖾𝗅𝗌 𝖺𝗇𝖽 𝗀𝗋𝗈𝗎𝗉𝗌 𝗐𝗂𝗍𝗁 𝗉𝖾𝗋𝗆𝗂𝗌𝗌𝗂𝗈𝗇 𝗍𝗈 𝖺𝖽𝖽 𝗇𝖾𝗐 𝗆𝖾𝗆𝖻𝖾𝗋𝗌.\n\n**<blockquote>ᴍᴀɪɴᴛᴀɪɴᴇᴅ ʙʏ : <a href='https://telegram.me/CallOwnerBot'>ʀᴀʜᴜʟ</a></blockquote>**"
 
-API_ID = int(env.get('API_ID', ''))
-API_HASH = env.get('API_HASH', '')
-BOT_TOKEN = env.get('BOT_TOKEN', '')
-DB_URL = env.get('DB_URL', '')
-ADMINS = int(env.get('ADMINS', ''))
-AUTH_CHANNEL = int(env.get('AUTH_CHANNEL', ''))
+API_ID = int(env.get('API_ID', '29707147'))
+API_HASH = env.get('API_HASH', 'ceff19669a8941be50f5c2b2fedd3b97')
+BOT_TOKEN = env.get('BOT_TOKEN', '7637892776:AAG6YX90hEazGQrYjlKSZe1q6pyqMzi-CY0')
+DB_URL = env.get('DB_URL', 'mongodb+srv://ashrfalkhtry654:5WCV1Tul8zyneLUI@cluster0.6o90p.mongodb.net/auto_requestDB?retryWrites=true&w=majority&appName=Cluster0')
+ADMINS = int(env.get('ADMINS', '1095477203'))
+AUTH_CHANNEL = int(env.get('AUTH_CHANNEL', '-1002312364035'))
 
 Dbclient = AsyncIOMotorClient(DB_URL)
 Cluster = Dbclient['Cluster0']
