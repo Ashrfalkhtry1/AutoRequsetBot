@@ -13,247 +13,199 @@ app = Client(
     api_hash=cfg.API_HASH,
     bot_token=cfg.BOT_TOKEN
 )
-@app.on_chat_join_request(filters.group | filters.channel)
-async def approve(_, m: Message):
-    op = m.chat
-    kk = m.from_user
+import logging
+from telegram import Update, ChatInviteLink
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ChatJoinRequestHandler,
+    ContextTypes,
+)
+
+# ------------------------------------------
+# 1) ضبط اللوج
+# ------------------------------------------
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# ------------------------------------------
+# 2) ضع التوكن الخاص ببوتك هنا
+# ------------------------------------------
+
+
+# ------------------------------------------
+# 3) متغير لتخزين بيانات القنوات والمجموعات للمستخدمين في الذاكرة
+#    البنية: {user_id: {"channels": [], "groups": []}}
+# ------------------------------------------
+user_data_store = {}
+
+# ------------------------------------------
+# 4) دالة لقبول طلب الانضمام تلقائي
+# ------------------------------------------
+async def join_request_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_join_request = update.chat_join_request
+    user_id = chat_join_request.from_user.id
+    chat_id = chat_join_request.chat.id
+
+    # قبول طلب الانضمام
+    await context.bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
+
+    # إرسال رسالة ترحيب في الخاص (إن أمكن)
     try:
-        add_group(m.chat.id)
-        await app.approve_chat_join_request(op.id, kk.id)
-        await app.send_message(kk.id, f"""مرحباً {m.from_user.mention} 🐾❤️👋
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"مرحبًا {chat_join_request.from_user.first_name}!\n"
+                 f"تم قبول طلب انضمامك في المجموعة/القناة بنجاح."
+        )
+    except Exception as e:
+        logging.warning(f"تعذر إرسال رسالة خاصة للمستخدم {user_id}: {e}")
 
-✨ **بوت إدارة طلبات الانضمام** ✨  
-هذا البوت يتيح لك قبول طلبات الانضمام الخاصة بالقنوات والكروبات ✅  
-يمكنك:
-- قبول الطلبات مباشرة بشكل تلقائي.  
-- تخزينها لقبولها لاحقاً بضغطة زر 📩  
+# ------------------------------------------
+# 5) أوامر البوت
+# ------------------------------------------
 
-📢 **قناة البوت:** [@looniaa1](https://t.me/looniaa1)  
-👨‍💻 **صانع البوتات:** [@dev_ashrf](https://t.me/dev_ashrf)  
-""")
-        add_user(kk.id)
-    except errors.PeerIdInvalid as e:
-        print("user isn't start bot(means group)")
-    except Exception as err:
-        print(str(err))
+# --- أمر /start ---
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
 
+    # تهيئة التخزين للمستخدم إن لم يكن موجودًا
+    if user_id not in user_data_store:
+        user_data_store[user_id] = {"channels": [], "groups": []}
 
-@app.on_message(filters.private & filters.command("start"))
-async def op(_, m: Message):
-    try:
-        await app.get_chat_member(cfg.CHID, m.from_user.id)
-    except:
-        try:
-            invite_link = await app.create_chat_invite_link(int(cfg.CHID))
-        except:
-            await m.reply("Make Sure I Am Admin In Your Channel")
-            return 
-        key = InlineKeyboardMarkup(
-            [[
-                InlineKeyboardButton("Join Update Channel", url=invite_link.invite_link),
-                InlineKeyboardButton("Check Again", callback_data="chk")
-            ]]
-        ) 
-        await m.reply_text("Access Denied! Join My Update Channel To Use Me.", reply_markup=key)
-        return 
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton("اضافة قناة", callback_data="add_channel"),
-                InlineKeyboardButton("اضافة كروب", callback_data="add_group")
-            ],
-            [
-                InlineKeyboardButton("قنواتي وكروباتي", callback_data="my_channels")
-            ],
-            [
-                InlineKeyboardButton("انضمام الى القناة", url="https://t.me/+rfquoCO_seszYzRk")
-            ]
-        ]
-    )
-    add_user(m.from_user.id)
-    await m.reply_photo(
-    "https://ibb.co/vhW9ntn", 
-    caption=f"""مرحباً {m.from_user.mention} 🐾❤️👋
-
-✨ **بوت إدارة طلبات الانضمام** ✨  
-هذا البوت يتيح لك قبول طلبات الانضمام الخاصة بالقنوات والكروبات ✅  
-يمكنك:
-- قبول الطلبات مباشرة بشكل تلقائي.  
-- تخزينها لقبولها لاحقاً بضغطة زر 📩  
-
-📢 **قناة البوت:** [@looniaa1](https://t.me/looniaa1)  
-👨‍💻 **صانع البوتات:** [@dev_ashrf](https://t.me/dev_ashrf)  
-""",
-    reply_markup=keyboard
+    await update.message.reply_text(
+        "أهلاً بك!\n"
+        "استخدم الأوامر التالية:\n"
+        "/addchannel - لإضافة قناة\n"
+        "/addgroup - لإضافة مجموعة\n"
+        "/mylist - لعرض القنوات والمجموعات لديك\n"
+        "/joinchannel - للانضمام إلى قناة محددة"
     )
 
+# --- أمر /addchannel ---
+async def add_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
 
-@app.on_callback_query(filters.regex("add_channel"))
-async def add_channel_callback(_, cb: CallbackQuery):
+    # التأكد من وجود بارامتر (اسم قناة أو رابط)
+    if not context.args:
+        await update.message.reply_text("الرجاء كتابة اسم المستخدم الخاص بالقناة أو رابط القناة بعد الأمر.\nمثال: /addchannel @channel_username")
+        return
+
+    channel_link_or_username = context.args[0]
+
+    # حفظ القناة في ذاكرة المستخدم
+    if user_id not in user_data_store:
+        user_data_store[user_id] = {"channels": [], "groups": []}
+
+    user_data_store[user_id]["channels"].append(channel_link_or_username)
+
+    await update.message.reply_text(
+        f"تم إضافة القناة: {channel_link_or_username} إلى قائمتك بنجاح!"
+    )
+
+# --- أمر /addgroup ---
+async def add_group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # التأكد من وجود بارامتر (اسم مجموعة أو رابط)
+    if not context.args:
+        await update.message.reply_text("الرجاء كتابة رابط أو اسم مستخدم المجموعة بعد الأمر.\nمثال: /addgroup @my_private_group")
+        return
+
+    group_link_or_username = context.args[0]
+
+    # حفظ المجموعة في ذاكرة المستخدم
+    if user_id not in user_data_store:
+        user_data_store[user_id] = {"channels": [], "groups": []}
+
+    user_data_store[user_id]["groups"].append(group_link_or_username)
+
+    await update.message.reply_text(
+        f"تم إضافة المجموعة: {group_link_or_username} إلى قائمتك بنجاح!"
+    )
+
+# --- أمر /mylist ---
+async def my_list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    # التأكد من أن للمستخدم بيانات
+    if user_id not in user_data_store:
+        await update.message.reply_text("لا توجد أي بيانات محفوظة لديك.")
+        return
+
+    channels = user_data_store[user_id]["channels"]
+    groups = user_data_store[user_id]["groups"]
+
+    if not channels and not groups:
+        await update.message.reply_text("قائمتك خالية من القنوات والمجموعات.")
+        return
+
+    msg = "قنواتك:\n" if channels else "لا توجد قنوات.\n"
+    for ch in channels:
+        msg += f"- {ch}\n"
+
+    msg += "\nمجموعاتك:\n" if groups else "\nلا توجد مجموعات.\n"
+    for gr in groups:
+        msg += f"- {gr}\n"
+
+    await update.message.reply_text(msg)
+
+# --- أمر /joinchannel ---
+async def join_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    هذا الأمر يرسل رابط الانضمام للقناة إن كان متاحًا.
+    يجب أن يكون البوت أدمن في القناة حتى يستطيع إنشاء رابط دعوة.
+    """
+    if not context.args:
+        await update.message.reply_text("الرجاء إدخال معرف القناة (username) بعد الأمر.\nمثال: /joinchannel @mychannel")
+        return
+
+    channel_username = context.args[0]
+
     try:
-        keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton("إضافة البوت إلى القناة", callback_data="add_bot_to_channel"),
-                    InlineKeyboardButton("رجوع", callback_data="go_back")
-                ]
-            ]
+        # إنشاء رابط دعوة مؤقت (قابل للاستخدام مرة واحدة أو أكثر حسب الإعدادات)
+        invite_link: ChatInviteLink = await context.bot.create_chat_invite_link(
+            chat_id=channel_username,
+            name="Temp Link",  # اسم وصفي للرابط (اختياري)
+            creates_join_request=False,  # إذا True فسيكون 'طلب انضمام' وليس رابط دعوة مباشر
+            member_limit=1,  # مثلاً رابط لشخص واحد
+            expire_date=None  # يمكن تحديد وقت انتهاء
         )
-        await cb.message.edit_text(
-            "ارفع البوت مشرف في قناتك\nثم ارسل توجيه من قناتك أو معرف القناة",
-            reply_markup=keyboard
-        )
-    except errors.MessageNotModified:
-        pass  # تجاهل الخطأ إذا كانت الرسالة لم تتغير
 
-@app.on_callback_query(filters.regex("add_bot_to_channel"))
-async def add_bot_to_channel_callback(_, cb: CallbackQuery):
-    try:
-        user_chats = await app.get_dialogs()
-        channels = [
-            chat for chat in user_chats
-            if chat.chat.type == enums.ChatType.CHANNEL
-        ]
-        admin_channels = []
-        for chat in channels:
-            try:
-                chat_member = await app.get_chat_member(chat.chat.id, cb.from_user.id)
-                if chat_member.status in [enums.ChatMemberStatus.ADMIN, enums.ChatMemberStatus.CREATOR]:
-                    admin_channels.append(chat)
-            except Exception as e:
-                continue
-
-        if not admin_channels:
-            await cb.answer("لم يتم العثور على قنوات مرتبطة بحسابك أو أنت لست مشرفًا في أي قناة.", show_alert=True)
-            return
-
-        buttons = [
-            [InlineKeyboardButton(chat.chat.title, callback_data=f"select_channel_{chat.chat.id}")]
-            for chat in admin_channels
-        ]
-        buttons.append([InlineKeyboardButton("رجوع", callback_data="go_back")])
-
-        keyboard = InlineKeyboardMarkup(buttons)
-        new_text = "اختر القناة التي تريد إضافة البوت إليها:"
-        current_text = cb.message.text  # النص الحالي للرسالة
-
-        if current_text != new_text:  # التحقق من اختلاف النص
-            await cb.message.edit_text(
-                new_text,
-                reply_markup=keyboard
-            )
-        else:
-            await cb.answer("الرسالة لم تتغير.", show_alert=True)
-
-    except Exception as e:
-        print(f"Error: {e}")
-        await cb.answer("حدث خطأ أثناء جلب القنوات. تحقق من الصلاحيات وحاول مرة أخرى.", show_alert=True)
-
-
-@app.on_callback_query(filters.regex("select_channel_"))
-async def select_channel_callback(_, cb: CallbackQuery):
-    channel_id = int(cb.data.split("_")[-1])
-    new_text = f"قم برفع البوت مشرف في القناة {channel_id}.\nثم اختر الصلاحيات التي ستعطيها للبوت:"
-    current_text = cb.message.text  # النص الحالي للرسالة
-
-    if current_text != new_text:  # التحقق من اختلاف النص
-        keyboard = InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("Add bot as Admin", callback_data=f"add_admin_{channel_id}")],
-                [InlineKeyboardButton("رجوع", callback_data="add_bot_to_channel")]
-            ]
-        )
-        await cb.message.edit_text(
-            new_text,
-            reply_markup=keyboard
-        )
-    else:
-        await cb.answer("الرسالة لم تتغير.", show_alert=True)
-@app.on_callback_query(filters.regex("add_admin_"))
-async def add_admin_callback(_, cb: CallbackQuery):
-    channel_id = int(cb.data.split("_")[-1])
-    try:
-        await cb.answer("تم إضافة البوت كأدمن!", show_alert=True)
-        await cb.message.edit_text(
-            f"تم إضافة البوت كأدمن في القناة {channel_id}.\nالرجاء إرسال توجيه من قناتك أو معرف القناة لإتمام العملية."
-        )
-    except Exception as e:
-        print(e)
-        await cb.answer("حدث خطأ أثناء رفع البوت كأدمن.", show_alert=True)
-
-@app.on_callback_query(filters.regex("go_back"))
-async def go_back_callback(_, cb: CallbackQuery):
-    await op(_, cb.message)
-
-
-@app.on_callback_query(filters.regex("channel_settings"))
-async def channel_settings_callback(_, cb: CallbackQuery):
-    channel_id = int(cb.data.split("_")[-1])
-    try:
-        chat = await app.get_chat(channel_id)
-        keyboard = InlineKeyboardMarkup(
-            [
-                [InlineKeyboardButton("خزن الطلبات: مفعل", callback_data=f"toggle_store_{channel_id}")],
-                [InlineKeyboardButton("قبول كل الطلبات المعلقة", callback_data=f"accept_all_{channel_id}")],
-                [InlineKeyboardButton("تحديث المعلومات", callback_data=f"refresh_info_{channel_id}")],
-                [InlineKeyboardButton("ازالة من البوت", callback_data=f"remove_channel_{channel_id}")],
-                [InlineKeyboardButton("رجوع", callback_data=f"my_channels")]
-            ]
-        )
-        await cb.message.edit_text(
-            f"""هذه الاعدادات الخاصة بك
-
-الاسم: {chat.title}
-الايدي: {chat.id}
-الرابط الخاص: {chat.invite_link}
-خزن الطلبات: يخزن الطلبات لقبولها في وقت لاحق بموافقتك
-الطلبات المعلقة: لا يوجد طلبات حاليا
-""",
-            reply_markup=keyboard
+        await update.message.reply_text(
+            f"هذا هو رابط الدعوة لقناتك:\n{invite_link.invite_link}\n"
+            f"يسمح بدخول مستخدم واحد فقط (حسب الإعدادات)."
         )
     except Exception as e:
-        print(e)
-        await cb.answer("حدث خطأ أثناء جلب معلومات القناة.", show_alert=True)
+        logging.error(f"حصل خطأ أثناء إنشاء رابط الدعوة: {e}")
+        await update.message.reply_text(
+            "تعذر إنشاء رابط دعوة. تأكد أن البوت أدمن في القناة ولديه الصلاحيات المناسبة."
+        )
 
-@app.on_message(filters.command("users") & filters.user(cfg.SUDO))
-async def dbtool(_, m: Message):
-    xx = all_users()
-    x = all_groups()
-    tot = int(xx + x)
-    await m.reply_text(text=f"Chats Stats Users: {xx} Groups: {x} Total: {tot}")
+# ------------------------------------------
+# 6) الدالة الرئيسية لتشغيل البوت
+# ------------------------------------------
+async def main():
+    # إنشاء التطبيق (Application)
+    application = ApplicationBuilder().token(cfg.BOT_TOKEN).build()
 
-@app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def bcast(_, m: Message):
-    allusers = users
-    lel = await m.reply_text("Processing...")
-    success = 0
-    failed = 0
-    deactivated = 0
-    blocked = 0
+    # إضافة الهاندلر الخاص بطلبات الانضمام
+    application.add_handler(ChatJoinRequestHandler(join_request_handler))
 
-    for usrs in allusers.find():
-        try:
-            userid = usrs["user_id"]
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(userid)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(e)
-            failed += 1
+    # إضافة أوامر البوت
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("addchannel", add_channel_command))
+    application.add_handler(CommandHandler("addgroup", add_group_command))
+    application.add_handler(CommandHandler("mylist", my_list_command))
+    application.add_handler(CommandHandler("joinchannel", join_channel_command))
 
-    await lel.edit(f"Success: {success} Failed: {failed} Blocked: {blocked} Deactivated: {deactivated}")
+    # تشغيل البوت (Polling)
+    await application.run_polling()
 
-print("Bot is running!")
-app.run()
-
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# ------------------------------------------
+# 7) تشغيل البوت
+# ------------------------------------------
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
